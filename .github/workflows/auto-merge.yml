@@ -12,17 +12,23 @@ jobs:
   yolo:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Check + Merge (no review = YOLO)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR=${{ github.event.number }}
           echo "PR #$PR"
-          APPROVALS=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --jq "[.[] | select(.state==\"APPROVED\")] | length")
+          APPROVALS=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --jq '[.[] | select(.state=="APPROVED")] | length')
           echo "Approvals: $APPROVALS"
           if [ "$APPROVALS" = "0" ]; then
             echo "YOLO merge..."
             gh pr merge "$PR" --squash --delete-branch --subject "YOLO merge (no review): ${{ github.event.pull_request.title }}"
           else
-            echo "Has review, skip"
+            echo "Has review approval, skip"
+            exit 0
           fi
