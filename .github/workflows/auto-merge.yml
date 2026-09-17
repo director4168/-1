@@ -1,0 +1,28 @@
+name: YOLO auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  yolo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check + Merge (no review = YOLO)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=${{ github.event.number }}
+          echo "PR #$PR"
+          APPROVALS=$(gh api "repos/${{ github.repository }}/pulls/$PR/reviews" --jq "[.[] | select(.state==\"APPROVED\")] | length")
+          echo "Approvals: $APPROVALS"
+          if [ "$APPROVALS" = "0" ]; then
+            echo "YOLO merge..."
+            gh pr merge "$PR" --squash --delete-branch --subject "YOLO merge (no review): ${{ github.event.pull_request.title }}"
+          else
+            echo "Has review, skip"
+          fi
